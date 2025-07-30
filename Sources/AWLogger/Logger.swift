@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import SwiftyBeaver
+@_exported import SwiftyBeaver
 
 @objc
 public class Logger: NSObject, Logging {
