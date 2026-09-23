@@ -26,6 +26,6 @@ let package = Package(
                 .define("AWLOGGER_EXPORTS_SWIFTYBEAVER")
             ]
         ),
-
+        .testTarget(name: "AWLoggerTests", dependencies: ["AWLogger"]),
     ]
 )

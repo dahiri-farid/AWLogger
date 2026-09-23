@@ -11,46 +11,36 @@ import Foundation
 
 @objc
 public class Logger: NSObject, Logging {
-    public var logFileURL: URL? {
-        baseURL?.appendingPathComponent(logFilename, isDirectory: false)
-    }
-    let baseURL: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+    // Swift initializes a static let once, including when callers arrive on different threads.
+    private static let sharedDestinations = LogDestinations()
+    private let destinations: LogDestinations
     private let logger = SwiftyBeaver.self
-    let logFilename: String = {
-        let name: String
-        if let displayName = Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String {
-            name = displayName
-        } else if let bundleName = Bundle.main.infoDictionary?["CFBundleName"] as? String {
-            name = bundleName
-        } else {
-            name = "logfile"
-        }
-        
-        // e.g. "MyApp.log"
-        let filename = name + ".log"
-        
-        return filename
-    }()
-    public override init() {
-        // add log destinations. at least one is needed!
-        let console = ConsoleDestination() // log to Xcode Console
-        
-        // In Xcode 15, specifying the logging method as .logger to display color, subsystem, and category information in the console.(Relies on the OSLog API)
-        console.logPrintWay = .logger(subsystem: "Main", category: "UI")
-        // If you prefer not to use the OSLog API, you can use print instead.
-        // console.logPrintWay = .print
-        
-        // iOS, watchOS, etc. are using the caches directory
 
-        
-        let file = FileDestination(
-            logFileURL: baseURL?.appendingPathComponent(logFilename, isDirectory: false)
-        )
-        file.logFileAmount = 2
-        
-        // add the destinations to SwiftyBeaver
-        logger.addDestination(console)
-        logger.addDestination(file)
+    public var logFileURL: URL? { destinations.file.logFileURL }
+
+    public override init() {
+        destinations = Self.sharedDestinations
+        super.init()
+    }
+
+    internal init(destinations: LogDestinations) {
+        self.destinations = destinations
+        super.init()
+    }
+
+    /// Copies every retained segment into a unique temporary directory.
+    ///
+    /// The caller owns the returned directory and must remove it after exporting. The copies
+    /// are made on the logging queue, after preceding writes and without concurrent rotation.
+    /// Call this off the main thread because copying retained logs can take time.
+    public func makeLogSnapshot() throws -> URL {
+        try destinations.makeSnapshot()
+    }
+
+    /// Waits for queued writes before suspension or termination, up to the supplied timeout.
+    @discardableResult
+    public func flush(secondTimeout: Int64 = 1) -> Bool {
+        logger.flush(secondTimeout: secondTimeout)
     }
     
     public func verbose(_ message: Any, file: String = #file, function: String = #function, line: Int = #line) {
@@ -73,4 +63,3 @@ public class Logger: NSObject, Logging {
         logger.error(message, file: file, function: function, line: line)
     }
 }
-
