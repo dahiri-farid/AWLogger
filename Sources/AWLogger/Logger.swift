@@ -16,6 +16,8 @@ public class Logger: NSObject, Logging {
     private let destinations: LogDestinations
     private let logger = SwiftyBeaver.self
 
+    public var sessionID: String { destinations.sessionID }
+
     public var logFileURL: URL? { destinations.file.logFileURL }
 
     public override init() {
